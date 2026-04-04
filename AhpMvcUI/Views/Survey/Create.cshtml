@@ -10,6 +10,13 @@
                     <h3 class="card-title mb-4 fw-bold text-primary">Yeni Anket Oluştur</h3>
 
                     <div class="mb-3">
+                        <label class="form-label text-muted fw-bold">Kategori Seçimi</label>
+                        <select id="categoryId" class="form-select form-control form-control-lg">
+                            <option value="">Yükleniyor...</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label text-muted fw-bold">Anket Başlığı</label>
                         <input type="text" id="title" class="form-control form-control-lg" />
                     </div>
@@ -45,6 +52,24 @@
     <script>
         let questionCounter = 0;
 
+        $(document).ready(function () {
+            var token = localStorage.getItem("token");
+            if (token) {
+                $.ajax({
+                    url: "http://localhost:5030/api/Categories",
+                    type: "GET",
+                    headers: { "Authorization": "Bearer " + token },
+                    success: function (data) {
+                        var html = '<option value="">Lütfen bir kategori seçin...</option>';
+                        $.each(data, function (index, category) {
+                            html += '<option value="' + category.id + '">' + category.name + '</option>';
+                        });
+                        $("#categoryId").html(html);
+                    }
+                });
+            }
+        });
+
         $("#btnAddQuestion").click(function () {
             questionCounter++;
             let html = '<div class="card mb-3 border-left-primary bg-light q-item" id="q-' + questionCounter + '">' +
@@ -75,6 +100,12 @@
                 return;
             }
 
+            var catId = $("#categoryId").val();
+            if (!catId) {
+                alert("Lütfen anket için bir kategori seçin!");
+                return;
+            }
+
             var questionsList = [];
             $(".q-item").each(function () {
                 var textVal = $(this).find(".q-text").val();
@@ -91,6 +122,7 @@
             var data = {
                 Title: $("#title").val(),
                 Description: $("#description").val(),
+                CategoryId: parseInt(catId),
                 Questions: questionsList
             };
 
@@ -107,7 +139,7 @@
                     }, 2000);
                 },
                 error: function () {
-                    $("#message").html('<div class="alert alert-danger">Anket oluşturulurken bir hata meydana geldi. API konsolunu kontrol edin.</div>');
+                    $("#message").html('<div class="alert alert-danger">Anket oluşturulurken bir hata meydana geldi.</div>');
                 }
             });
         });
