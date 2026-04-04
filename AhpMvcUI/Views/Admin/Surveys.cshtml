@@ -1,0 +1,79 @@
+﻿@{
+    ViewData["Title"] = "Anket Yönetimi";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Anket Yönetimi</h1>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Sistemdeki Tüm Anketler</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="surveysTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Başlık</th>
+                        <th>Açıklama</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="surveyList">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            loadSurveys();
+        });
+
+        function loadSurveys() {
+            var token = localStorage.getItem("token");
+            $.ajax({
+                url: "http://localhost:5030/api/Surveys",
+                type: "GET",
+                headers: { "Authorization": "Bearer " + token },
+                success: function (data) {
+                    var html = "";
+                    $.each(data, function (index, survey) {
+                        html += '<tr>';
+                        html += '<td>' + survey.id + '</td>';
+                        html += '<td>' + survey.title + '</td>';
+                        html += '<td>' + survey.description + '</td>';
+                        html += '<td>';
+                        html += '<button class="btn btn-danger btn-sm" onclick="deleteSurvey(' + survey.id + ')"><i class="fas fa-trash"></i> Sil</button>';
+                        html += '</td>';
+                        html += '</tr>';
+                    });
+                    $("#surveyList").html(html);
+                }
+            });
+        }
+
+        function deleteSurvey(id) {
+            if (confirm("Bu anketi silmek istediğinize emin misiniz?")) {
+                var token = localStorage.getItem("token");
+                $.ajax({
+                    url: "http://localhost:5030/api/Surveys/" + id,
+                    type: "DELETE",
+                    headers: { "Authorization": "Bearer " + token },
+                    success: function () {
+                        alert("Anket başarıyla silindi!");
+                        loadSurveys();
+                    },
+                    error: function () {
+                        alert("Silme işlemi başarısız oldu.");
+                    }
+                });
+            }
+        }
+    </script>
+}

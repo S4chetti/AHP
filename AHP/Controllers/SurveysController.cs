@@ -4,6 +4,7 @@ using AHP.Models;
 using AHP.Models.CoreApiProject.Models;
 using AHP.Repositories;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AHP.Controllers
@@ -14,10 +15,12 @@ namespace AHP.Controllers
     public class SurveysController : ControllerBase
     {
         private readonly IGenericRepository<Survey> _repository;
+        private readonly UserManager<AppUser> _userManager;
 
-        public SurveysController(IGenericRepository<Survey> repository)
+        public SurveysController(IGenericRepository<Survey> repository, UserManager<AppUser> userManager)
         {
             _repository = repository;
+            _userManager = userManager;
         }
 
         [HttpGet]
@@ -53,15 +56,40 @@ namespace AHP.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Add(SurveyDto dto)
+        public async Task<IActionResult> Add(CreateSurveyDto dto)
         {
+            var user = await _userManager.FindByNameAsync(User.Identity.Name);
+
             var survey = new Survey
             {
                 Title = dto.Title,
                 Description = dto.Description,
                 CreatedDate = DateTime.Now,
-                AppUserId = dto.AppUserId
+                AppUserId = user.Id,
+                Questions = new List<Question>()
             };
+
+            if (dto.Questions != null)
+            {
+                foreach (var q in dto.Questions)
+                {
+                    var question = new Question
+                    {
+                        Text = q.Text,
+                        Options = new List<Option>()
+                    };
+
+                    if (q.IsRating)
+                    {
+                        for (int i = 1; i <= 5; i++)
+                        {
+                            question.Options.Add(new Option { Text = i.ToString() });
+                        }
+                    }
+                    survey.Questions.Add(question);
+                }
+            }
+
             await _repository.AddAsync(survey);
             await _repository.SaveAsync();
             return Ok(survey);

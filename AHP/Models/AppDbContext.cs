@@ -14,6 +14,7 @@
             public DbSet<Survey> Surveys { get; set; }
             public DbSet<Question> Questions { get; set; }
             public DbSet<Option> Options { get; set; }
+            public DbSet<Category> Categories { get; set; }
         }
     }
 }

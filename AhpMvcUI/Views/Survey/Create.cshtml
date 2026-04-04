@@ -1,0 +1,115 @@
+﻿@{
+    ViewData["Title"] = "Yeni Anket Ekle";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow border-0 mb-4">
+                <div class="card-body p-5">
+                    <h3 class="card-title mb-4 fw-bold text-primary">Yeni Anket Oluştur</h3>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted fw-bold">Anket Başlığı</label>
+                        <input type="text" id="title" class="form-control form-control-lg" />
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-muted fw-bold">Açıklama</label>
+                        <textarea id="description" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold text-secondary">Sorular</h5>
+                        <button id="btnAddQuestion" class="btn btn-outline-success">
+                            + Yeni Soru Ekle
+                        </button>
+                    </div>
+
+                    <div id="questionsArea">
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <button id="btnSaveSurvey" class="btn btn-primary btn-lg w-100 shadow-sm">Anketi Kaydet ve Yayınla</button>
+                    <div id="message" class="mt-3 text-center"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let questionCounter = 0;
+
+        $("#btnAddQuestion").click(function () {
+            questionCounter++;
+            let html = '<div class="card mb-3 border-left-primary bg-light q-item" id="q-' + questionCounter + '">' +
+                '<div class="card-body">' +
+                '<div class="row align-items-center">' +
+                '<div class="col-md-7">' +
+                '<input type="text" class="form-control q-text" placeholder="Sorunuzu buraya yazın...">' +
+                '</div>' +
+                '<div class="col-md-4">' +
+                '<select class="form-select form-control q-type">' +
+                '<option value="1">1-5 Arası Puanlama (Şıklı)</option>' +
+                '<option value="0">Açık Uçlu (Metin Yazmalı)</option>' +
+                '</select>' +
+                '</div>' +
+                '<div class="col-md-1">' +
+                '<button class="btn btn-danger w-100 fw-bold" onclick="$(\'#q-' + questionCounter + '\').remove()">X</button>' +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
+            $("#questionsArea").append(html);
+        });
+
+        $("#btnSaveSurvey").click(function () {
+            var token = localStorage.getItem("token");
+            if (!token) {
+                alert("Lütfen önce giriş yapın!");
+                return;
+            }
+
+            var questionsList = [];
+            $(".q-item").each(function () {
+                var textVal = $(this).find(".q-text").val();
+                var typeVal = $(this).find(".q-type").val();
+
+                if (textVal.trim() !== "") {
+                    questionsList.push({
+                        Text: textVal,
+                        IsRating: typeVal === "1" ? true : false
+                    });
+                }
+            });
+
+            var data = {
+                Title: $("#title").val(),
+                Description: $("#description").val(),
+                Questions: questionsList
+            };
+
+            $.ajax({
+                url: "http://localhost:5030/api/Surveys",
+                type: "POST",
+                contentType: "application/json",
+                headers: { "Authorization": "Bearer " + token },
+                data: JSON.stringify(data),
+                success: function () {
+                    $("#message").html('<div class="alert alert-success">Anket ve sorular başarıyla oluşturuldu! Yönlendiriliyorsunuz...</div>');
+                    setTimeout(function () {
+                        window.location.href = "/Home/Index";
+                    }, 2000);
+                },
+                error: function () {
+                    $("#message").html('<div class="alert alert-danger">Anket oluşturulurken bir hata meydana geldi. API konsolunu kontrol edin.</div>');
+                }
+            });
+        });
+    </script>
+}
