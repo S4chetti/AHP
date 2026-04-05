@@ -1,0 +1,63 @@
+﻿@{
+    ViewData["Title"] = "Üye Yönetimi";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Üye Yönetimi</h1>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Sistemdeki Tüm Üyeler</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="usersTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Ad Soyad</th>
+                        <th>E-Posta</th>
+                        <th>Kayıt Tarihi</th>
+                    </tr>
+                </thead>
+                <tbody id="userList">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            loadUsers();
+        });
+
+        function loadUsers() {
+            var token = localStorage.getItem("token");
+            $.ajax({
+                url: "http://localhost:5030/api/Users",
+                type: "GET",
+                headers: { "Authorization": "Bearer " + token },
+                success: function (data) {
+                    var html = "";
+                    $.each(data, function (index, user) {
+                        var dateObj = new Date(user.registrationDate);
+                        var formattedDate = dateObj.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+                        html += '<tr>';
+                        html += '<td>' + (user.fullName ? user.fullName : "-") + '</td>';
+                        html += '<td>' + user.email + '</td>';
+                        html += '<td>' + formattedDate + '</td>';
+                        html += '</tr>';
+                    });
+                    $("#userList").html(html);
+                },
+                error: function () {
+                    alert("Üyeler yüklenirken hata oluştu.");
+                }
+            });
+        }
+    </script>
+}

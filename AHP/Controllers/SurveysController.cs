@@ -88,18 +88,13 @@ namespace AHP.Controllers
         [HttpPost]
         public async Task<IActionResult> Add(CreateSurveyDto dto)
         {
-            var userName = User.Identity.Name;
-            var user = await _userManager.FindByNameAsync(userName);
+            var userName = User.Identity?.Name ?? User.FindFirst(ClaimTypes.Name)?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if (user == null)
-            {
-                user = await _userManager.FindByEmailAsync(userName);
-            }
+            if (string.IsNullOrEmpty(userName)) return Unauthorized();
 
-            if (user == null)
-            {
-                return Unauthorized("Kullanıcı oturumu bulunamadı.");
-            }
+            var user = await _userManager.FindByNameAsync(userName) ?? await _userManager.FindByEmailAsync(userName);
+
+            if (user == null) return Unauthorized();
 
             var survey = new Survey
             {
@@ -135,7 +130,7 @@ namespace AHP.Controllers
             await _repository.AddAsync(survey);
             await _repository.SaveAsync();
 
-            return Ok(new { Message = "Anket başarıyla eklendi." });
+            return Ok();
         }
 
         [HttpPut]
@@ -168,8 +163,11 @@ namespace AHP.Controllers
         {
             try
             {
-                var userName = User.Identity.Name;
-                var user = await _userManager.FindByNameAsync(userName);
+                var userName = User.Identity?.Name ?? User.FindFirst(ClaimTypes.Name)?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userName)) return Unauthorized();
+
+                var user = await _userManager.FindByNameAsync(userName) ?? await _userManager.FindByEmailAsync(userName);
 
                 if (user == null) return Unauthorized();
 
@@ -180,17 +178,50 @@ namespace AHP.Controllers
                         AppUserId = user.Id,
                         QuestionId = dto.QuestionId,
                         OptionId = dto.OptionId > 0 ? dto.OptionId : null,
-                        TextResponse = dto.TextResponse
+                        TextResponse = string.IsNullOrWhiteSpace(dto.TextResponse) ? null : dto.TextResponse
                     };
                     await _context.Answers.AddAsync(answer);
                 }
+
                 await _context.SaveChangesAsync();
-                return Ok(new { Message = "Cevaplar başarıyla kaydedildi." });
+                return Ok();
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, ex.InnerException != null ? ex.InnerException.Message : ex.Message);
             }
+        }
+
+        [HttpGet("{id}/Answers")]
+        public async Task<IActionResult> GetAnswers(int id)
+        {
+            var survey = await _context.Surveys
+                .Include(s => s.Questions)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (survey == null) return NotFound();
+
+            var questionIds = survey.Questions.Select(q => q.Id).ToList();
+
+            var answers = await _context.Answers
+                .Include(a => a.AppUser)
+                .Include(a => a.Question)
+                .ThenInclude(q => q.Options)
+                .Where(a => questionIds.Contains(a.QuestionId))
+                .ToListAsync();
+
+            var result = answers.GroupBy(a => a.AppUser)
+                .Select(g => new {
+                    UserId = g.Key.Id,
+                    UserName = g.Key.FullName ?? g.Key.UserName,
+                    Email = g.Key.Email,
+                    Responses = g.Select(a => new {
+                        QuestionText = a.Question.Text,
+                        AnswerText = a.OptionId != null ? a.Question.Options.FirstOrDefault(o => o.Id == a.OptionId)?.Text : a.TextResponse
+                    }).ToList()
+                }).ToList();
+
+            return Ok(result);
         }
     }
 }

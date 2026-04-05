@@ -1,0 +1,83 @@
+﻿@{
+    ViewData["Title"] = "Anket Cevapları";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Anket Cevapları Detayı</h1>
+    <a href="/Admin/Surveys" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Geri Dön</a>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Kullanıcı Cevapları</h6>
+    </div>
+    <div class="card-body">
+        <div id="answersContainer">
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Yükleniyor...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let surveyId = @ViewBag.SurveyId;
+
+        $(document).ready(function () {
+            loadAnswers();
+        });
+
+        function loadAnswers() {
+            var token = localStorage.getItem("token");
+            $.ajax({
+                url: "http://localhost:5030/api/Surveys/" + surveyId + "/Answers",
+                type: "GET",
+                headers: { "Authorization": "Bearer " + token },
+                success: function (data) {
+                    if (data.length === 0) {
+                        $("#answersContainer").html('<div class="alert alert-warning">Bu anket için henüz cevap bulunmamaktadır.</div>');
+                        return;
+                    }
+
+                    var html = '<div class="accordion" id="answersAccordion">';
+                    $.each(data, function (index, userAnswers) {
+                        html += '<div class="card mb-2">';
+                        html += '<div class="card-header" id="heading' + index + '">';
+                        html += '<h2 class="mb-0">';
+                        html += '<button class="btn btn-link btn-block text-left font-weight-bold text-dark text-decoration-none" type="button" data-toggle="collapse" data-target="#collapse' + index + '">';
+                        html += '<i class="fas fa-user mr-2"></i>' + userAnswers.userName + ' <span class="text-muted text-sm ml-2">(' + userAnswers.email + ')</span>';
+                        html += '</button>';
+                        html += '</h2>';
+                        html += '</div>';
+
+                        html += '<div id="collapse' + index + '" class="collapse" data-parent="#answersAccordion">';
+                        html += '<div class="card-body">';
+                        html += '<ul class="list-group list-group-flush">';
+
+                        $.each(userAnswers.responses, function (rIndex, resp) {
+                            html += '<li class="list-group-item">';
+                            html += '<strong class="d-block mb-1">Soru: ' + resp.questionText + '</strong>';
+                            html += '<span class="text-primary">Cevap: ' + (resp.answerText ? resp.answerText : "Boş bırakılmış") + '</span>';
+                            html += '</li>';
+                        });
+
+                        html += '</ul>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '</div>';
+                    });
+                    html += '</div>';
+
+                    $("#answersContainer").html(html);
+                },
+                error: function () {
+                    $("#answersContainer").html('<div class="alert alert-danger">Cevaplar yüklenirken bir hata oluştu.</div>');
+                }
+            });
+        }
+    </script>
+}

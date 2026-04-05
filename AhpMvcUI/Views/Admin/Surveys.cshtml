@@ -49,6 +49,7 @@
                         html += '<td>' + survey.title + '</td>';
                         html += '<td>' + survey.description + '</td>';
                         html += '<td>';
+                        html += '<a href="/Admin/SurveyAnswers/' + survey.id + '" class="btn btn-info btn-sm mr-2"><i class="fas fa-eye"></i> Cevapları Gör</a>';
                         html += '<button class="btn btn-danger btn-sm" onclick="deleteSurvey(' + survey.id + ')"><i class="fas fa-trash"></i> Sil</button>';
                         html += '</td>';
                         html += '</tr>';

@@ -63,7 +63,7 @@
                     html += '</div>';
                 } else {
                     html += '<div class="mt-2">';
-                    html += '<textarea class="form-control q-text-response" rows="3" placeholder="Cevabınızı buraya yazın..."></textarea>';
+                    html += '<textarea class="form-control q-text-response" rows="3"></textarea>';
                     html += '</div>';
                 }
                 html += '</div>';
@@ -79,7 +79,7 @@
             $("#btnSubmitAnswers").click(submitAnswers);
         }
 
-                function submitAnswers() {
+        function submitAnswers() {
             var token = localStorage.getItem("token");
             var answers = [];
             var isValid = true;
@@ -93,12 +93,11 @@
                     isValid = false;
                 }
 
-                        
                 answers.push({
-                QuestionId: parseInt(qId),
-                OptionId: selectedOption ? parseInt(selectedOption) : null,
-                TextResponse: textResponse ? textResponse.trim() : ""
-            });
+                    QuestionId: parseInt(qId),
+                    OptionId: selectedOption ? parseInt(selectedOption) : null,
+                    TextResponse: textResponse && textResponse.trim() !== "" ? textResponse.trim() : null
+                });
             });
 
             if (!isValid) {
@@ -113,16 +112,16 @@
                 headers: { "Authorization": "Bearer " + token },
                 data: JSON.stringify(answers),
                 success: function () {
-                    $("#submitMessage").html('<div class="alert alert-success shadow-sm">Cevaplarınız başarıyla kaydedildi! Ana sayfaya yönlendiriliyorsunuz...</div>');
+                    $("#submitMessage").html('<div class="alert alert-success shadow-sm">Cevaplarınız başarıyla kaydedildi!</div>');
                     setTimeout(function () {
                         window.location.href = "/Home/Index";
                     }, 2000);
                 },
                 error: function (xhr) {
-                    console.log(xhr.responseText);
-                    $("#submitMessage").html('<div class="alert alert-danger shadow-sm">Cevaplar gönderilirken bir hata oluştu: ' + xhr.responseText + '</div>');
+                    $("#submitMessage").html('<div class="alert alert-danger shadow-sm">' + xhr.responseText + '</div>');
                 }
             });
         }
     </script>
+}
 }
