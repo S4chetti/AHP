@@ -8,17 +8,24 @@
             <div class="card shadow border-0">
                 <div class="card-body p-5">
                     <h3 class="card-title text-center mb-4 fw-bold">Yeni Hesap Oluştur</h3>
+
                     <div class="mb-3">
                         <label class="form-label text-muted">Ad Soyad</label>
-                        <input type="text" id="fullName" class="form-control form-control-lg" />
+                        <input type="text" id="FullName" class="form-control form-control-lg" />
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Kullanıcı Adı</label>
+                        <input type="text" id="UserName" class="form-control form-control-lg" />
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label text-muted">Email Adresi</label>
-                        <input type="email" id="email" class="form-control form-control-lg" />
+                        <input type="email" id="Email" class="form-control form-control-lg" />
                     </div>
                     <div class="mb-4">
                         <label class="form-label text-muted">Şifre</label>
-                        <input type="password" id="password" class="form-control form-control-lg" />
+                        <input type="password" id="Password" class="form-control form-control-lg" />
                     </div>
                     <button id="btnRegister" class="btn btn-success btn-lg w-100 shadow-sm">Kayıt Ol</button>
                     <div id="registerMessage" class="mt-3 text-center"></div>
@@ -32,9 +39,10 @@
     <script>
         $("#btnRegister").click(function () {
             var data = {
-                fullName: $("#fullName").val(),
-                email: $("#email").val(),
-                password: $("#password").val()
+                FullName: $("#FullName").val(),
+                UserName: $("#UserName").val(),
+                Email: $("#Email").val(),
+                Password: $("#Password").val()
             };
 
             $.ajax({
@@ -43,13 +51,14 @@
                 contentType: "application/json",
                 data: JSON.stringify(data),
                 success: function () {
-                    $("#registerMessage").html('<div class="alert alert-success">Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...</div>');
+                    $("#registerMessage").html('<div class="alert alert-success shadow-sm">Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...</div>');
                     setTimeout(function () {
                         window.location.href = "/Auth/Login";
                     }, 2000);
                 },
-                error: function () {
-                    $("#registerMessage").html('<div class="alert alert-danger">Kayıt işlemi başarısız oldu. Bilgileri kontrol edin.</div>');
+                error: function (xhr) {
+                    var errorMsg = xhr.responseText ? xhr.responseText : "Kayıt işlemi başarısız oldu.";
+                    $("#registerMessage").html('<div class="alert alert-danger shadow-sm">' + errorMsg + '</div>');
                 }
             });
         });

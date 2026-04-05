@@ -1,5 +1,4 @@
 ﻿using AHP.DTOs;
-using AHP.Models;
 using AHP.Models.CoreApiProject.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -28,94 +27,77 @@ namespace AHP.Controllers
         [HttpPost("Register")]
         public async Task<IActionResult> Register(RegisterDto dto)
         {
-            var userExists = await _userManager.FindByEmailAsync(dto.Email);
-            if (userExists != null)
-                return StatusCode(StatusCodes.Status500InternalServerError, "User already exists!");
-
-            AppUser user = new()
+            try
             {
-                Email = dto.Email,
-                SecurityStamp = Guid.NewGuid().ToString(),
-                UserName = dto.Email,
-                FullName = dto.FullName
-            };
+                var user = new AppUser
+                {
+                    UserName = dto.UserName,
+                    Email = dto.Email,
+                    FullName = dto.FullName,
+                    RegistrationDate = DateTime.Now
+                };
 
-            var result = await _userManager.CreateAsync(user, dto.Password);
-            if (!result.Succeeded)
-                return StatusCode(StatusCodes.Status500InternalServerError, "User creation failed!");
+                var result = await _userManager.CreateAsync(user, dto.Password);
 
-            return Ok("User created successfully!");
+                if (result.Succeeded)
+                {
+                    return Ok();
+                }
+
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                return BadRequest(errors);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.InnerException != null ? ex.InnerException.Message : ex.Message);
+            }
         }
 
         [HttpPost("Login")]
         public async Task<IActionResult> Login(LoginDto dto)
         {
-            var user = await _userManager.FindByEmailAsync(dto.Email);
-            if (user != null && await _userManager.CheckPasswordAsync(user, dto.Password))
+            try
             {
-                var userRoles = await _userManager.GetRolesAsync(user);
+                var user = await _userManager.FindByNameAsync(dto.UserName) ?? await _userManager.FindByEmailAsync(dto.UserName);
 
-                var authClaims = new List<Claim>
+                if (user != null && await _userManager.CheckPasswordAsync(user, dto.Password))
                 {
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                };
+                    var userRoles = await _userManager.GetRolesAsync(user);
 
-                foreach (var userRole in userRoles)
-                {
-                    authClaims.Add(new Claim(ClaimTypes.Role, userRole));
+                    var authClaims = new List<System.Security.Claims.Claim>
+                    {
+                        new System.Security.Claims.Claim(ClaimTypes.Name, user.UserName),
+                        new System.Security.Claims.Claim(ClaimTypes.NameIdentifier, user.Id),
+                        new System.Security.Claims.Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                    };
+
+                    foreach (var role in userRoles)
+                    {
+                        authClaims.Add(new System.Security.Claims.Claim(ClaimTypes.Role, role));
+                    }
+
+                    var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+
+                    var token = new JwtSecurityToken(
+                        issuer: _configuration["Jwt:Issuer"],
+                        audience: _configuration["Jwt:Audience"],
+                        expires: DateTime.Now.AddDays(1),
+                        claims: authClaims,
+                        signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+                    );
+
+                    return Ok(new
+                    {
+                        token = new JwtSecurityTokenHandler().WriteToken(token),
+                        expiration = token.ValidTo
+                    });
                 }
-
-                var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
-
-                var token = new JwtSecurityToken(
-                    issuer: _configuration["Jwt:Issuer"],
-                    audience: _configuration["Jwt:Audience"],
-                    expires: DateTime.Now.AddHours(3),
-                    claims: authClaims,
-                    signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
-                );
-
-                return Ok(new
-                {
-                    token = new JwtSecurityTokenHandler().WriteToken(token),
-                    expiration = token.ValidTo
-                });
+                return Unauthorized("Kullanıcı adı veya şifre hatalı.");
             }
-            return Unauthorized();
-        }
-
-        [HttpPost("CreateRole")]
-        public async Task<IActionResult> CreateRole(string roleName)
-        {
-            var roleExists = await _roleManager.RoleExistsAsync(roleName);
-            if (!roleExists)
+            catch (Exception ex)
             {
-                var result = await _roleManager.CreateAsync(new AppRole { Name = roleName });
-                if (result.Succeeded)
-                {
-                    return Ok($"Role {roleName} created successfully!");
-                }
-                return StatusCode(StatusCodes.Status500InternalServerError, "Role creation failed!");
+                return StatusCode(500, ex.InnerException != null ? ex.InnerException.Message : ex.Message);
             }
-            return BadRequest("Role already exists!");
-        }
-
-        [HttpPost("AssignRole")]
-        public async Task<IActionResult> AssignRole(string email, string roleName)
-        {
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null) return NotFound("User not found!");
-
-            var roleExists = await _roleManager.RoleExistsAsync(roleName);
-            if (!roleExists) return NotFound("Role not found!");
-
-            var result = await _userManager.AddToRoleAsync(user, roleName);
-            if (result.Succeeded)
-            {
-                return Ok($"Role {roleName} assigned to user {email} successfully!");
-            }
-            return BadRequest("Failed to assign role!");
         }
     }
 }

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AHP.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260404141629_InitialCreate")]
+    [Migration("20260405223911_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -38,14 +38,12 @@ namespace AHP.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int?>("OptionId")
-                        .IsRequired()
                         .HasColumnType("int");
 
                     b.Property<int>("QuestionId")
                         .HasColumnType("int");
 
                     b.Property<string>("TextResponse")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -101,6 +99,20 @@ namespace AHP.Migrations
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("AspNetRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "41595188-4660-45f8-b3ab-d21820dd5e3b",
+                            Name = "Admin",
+                            NormalizedName = "ADMIN"
+                        },
+                        new
+                        {
+                            Id = "76b6bbba-3f81-45ab-85fa-702330f8101a",
+                            Name = "User",
+                            NormalizedName = "USER"
+                        });
                 });
 
             modelBuilder.Entity("AHP.Models.CoreApiProject.Models.AppUser", b =>
@@ -123,7 +135,6 @@ namespace AHP.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("FullName")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("LockoutEnabled")
@@ -149,6 +160,9 @@ namespace AHP.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime>("RegistrationDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
@@ -170,6 +184,26 @@ namespace AHP.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "8177bdcf-4512-4043-baeb-cd0324b94a11",
+                            AccessFailedCount = 0,
+                            ConcurrencyStamp = "04e399d3-a257-4c61-a003-36b22981915b",
+                            Email = "admin@ahp.com",
+                            EmailConfirmed = true,
+                            FullName = "Sistem Yöneticisi",
+                            LockoutEnabled = false,
+                            NormalizedEmail = "ADMIN@AHP.COM",
+                            NormalizedUserName = "ADMIN",
+                            PasswordHash = "AQAAAAIAAYagAAAAEBoawEJhrwTP7awub2cnAr0MEDKsP6rUsRivfBgopYbejimouIcehuwmMThui1Mf7w==",
+                            PhoneNumberConfirmed = false,
+                            RegistrationDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            SecurityStamp = "c4c9ad73-e69e-4cde-b729-13b1df3a9d92",
+                            TwoFactorEnabled = false,
+                            UserName = "admin"
+                        });
                 });
 
             modelBuilder.Entity("AHP.Models.CoreApiProject.Models.Option", b =>
@@ -336,6 +370,13 @@ namespace AHP.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("AspNetUserRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            UserId = "8177bdcf-4512-4043-baeb-cd0324b94a11",
+                            RoleId = "41595188-4660-45f8-b3ab-d21820dd5e3b"
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -368,8 +409,7 @@ namespace AHP.Migrations
                     b.HasOne("AHP.Models.CoreApiProject.Models.Option", "Option")
                         .WithMany()
                         .HasForeignKey("OptionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("AHP.Models.CoreApiProject.Models.Question", "Question")
                         .WithMany()

@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace AHP.Migrations
 {
     /// <inheritdoc />
@@ -30,7 +32,8 @@ namespace AHP.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    FullName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FullName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RegistrationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -246,8 +249,8 @@ namespace AHP.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     AppUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     QuestionId = table.Column<int>(type: "int", nullable: false),
-                    OptionId = table.Column<int>(type: "int", nullable: false),
-                    TextResponse = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    OptionId = table.Column<int>(type: "int", nullable: true),
+                    TextResponse = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -271,6 +274,25 @@ namespace AHP.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
+
+            migrationBuilder.InsertData(
+                table: "AspNetRoles",
+                columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
+                values: new object[,]
+                {
+                    { "41595188-4660-45f8-b3ab-d21820dd5e3b", null, "Admin", "ADMIN" },
+                    { "76b6bbba-3f81-45ab-85fa-702330f8101a", null, "User", "USER" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "AspNetUsers",
+                columns: new[] { "Id", "AccessFailedCount", "ConcurrencyStamp", "Email", "EmailConfirmed", "FullName", "LockoutEnabled", "LockoutEnd", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "RegistrationDate", "SecurityStamp", "TwoFactorEnabled", "UserName" },
+                values: new object[] { "8177bdcf-4512-4043-baeb-cd0324b94a11", 0, "04e399d3-a257-4c61-a003-36b22981915b", "admin@ahp.com", true, "Sistem Yöneticisi", false, null, "ADMIN@AHP.COM", "ADMIN", "AQAAAAIAAYagAAAAEBoawEJhrwTP7awub2cnAr0MEDKsP6rUsRivfBgopYbejimouIcehuwmMThui1Mf7w==", null, false, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "c4c9ad73-e69e-4cde-b729-13b1df3a9d92", false, "admin" });
+
+            migrationBuilder.InsertData(
+                table: "AspNetUserRoles",
+                columns: new[] { "RoleId", "UserId" },
+                values: new object[] { "41595188-4660-45f8-b3ab-d21820dd5e3b", "8177bdcf-4512-4043-baeb-cd0324b94a11" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Answers_AppUserId",
