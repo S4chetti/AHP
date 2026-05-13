@@ -8,7 +8,6 @@ namespace AHP.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class CategoriesController : ControllerBase
     {
         private readonly IGenericRepository<Category> _repository;
@@ -31,6 +30,7 @@ namespace AHP.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Add(CategoryDto dto)
         {
             var category = new Category { Name = dto.Name };
@@ -40,6 +40,7 @@ namespace AHP.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var category = await _repository.GetByIdAsync(id);

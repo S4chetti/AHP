@@ -30,14 +30,15 @@ namespace AHP.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var surveys = await _repository.GetAllAsync();
+            var surveys = await _context.Surveys.Include(s => s.Category).ToListAsync();
             var dtos = surveys.Select(s => new SurveyDto
             {
                 Id = s.Id,
                 Title = s.Title,
                 Description = s.Description,
                 CreatedDate = s.CreatedDate,
-                AppUserId = s.AppUserId
+                AppUserId = s.AppUserId,
+                CategoryName = s.Category?.Name
             }).ToList();
             return Ok(dtos);
         }

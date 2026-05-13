@@ -1,28 +1,24 @@
 ﻿@{
-    ViewData["Title"] = "Üye Yönetimi";
-    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Kullanıcı Yönetimi";
 }
 
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Üye Yönetimi</h1>
-</div>
-
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Sistemdeki Tüm Üyeler</h6>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-bordered" id="usersTable" width="100%" cellspacing="0">
+<div class="container mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Sistemdeki Kullanıcılar</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
                 <thead>
                     <tr>
                         <th>Ad Soyad</th>
-                        <th>E-Posta</th>
-                        <th>Kayıt Tarihi</th>
+                        <th>Kullanıcı Adı</th>
+                        <th>Rol</th>
+                        <th>İşlemler</th>
                     </tr>
                 </thead>
-                <tbody id="userList">
-                </tbody>
+                <tbody id="userTableBody"></tbody>
             </table>
         </div>
     </div>
@@ -42,22 +38,49 @@
                 headers: { "Authorization": "Bearer " + token },
                 success: function (data) {
                     var html = "";
-                    $.each(data, function (index, user) {
-                        var dateObj = new Date(user.registrationDate);
-                        var formattedDate = dateObj.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    $.each(data, function (i, user) {
+                        var role = user.roles.includes("Admin") ? "Admin" : "User";
+                        var btnClass = role === "Admin" ? "btn-warning" : "btn-success";
+                        var nextRole = role === "Admin" ? "User" : "Admin";
 
-                        html += '<tr>';
-                        html += '<td>' + (user.fullName ? user.fullName : "-") + '</td>';
-                        html += '<td>' + user.email + '</td>';
-                        html += '<td>' + formattedDate + '</td>';
-                        html += '</tr>';
+                        html += "<tr>";
+                        html += "<td>" + user.fullName + "</td>";
+                        html += "<td>" + user.userName + "</td>";
+                        html += "<td><span class='badge bg-info'>" + role + "</span></td>";
+                        html += "<td>";
+                        html += "<button class='btn " + btnClass + " btn-sm me-2' onclick='changeRole(\"" + user.id + "\", \"" + nextRole + "\")'>" + nextRole + " Yap</button>";
+                        html += "<button class='btn btn-danger btn-sm' onclick='deleteUser(\"" + user.id + "\")'>Sil</button>";
+                        html += "</td></tr>";
                     });
-                    $("#userList").html(html);
-                },
-                error: function () {
-                    alert("Üyeler yüklenirken hata oluştu.");
+                    $("#userTableBody").html(html);
                 }
             });
+        }
+
+        function changeRole(userId, roleName) {
+            var token = localStorage.getItem("token");
+            $.ajax({
+                url: "http://localhost:5030/api/Users/ChangeRole?userId=" + userId + "&roleName=" + roleName,
+                type: "POST",
+                headers: { "Authorization": "Bearer " + token },
+                success: function () {
+                    loadUsers();
+                }
+            });
+        }
+
+        function deleteUser(id) {
+            if (confirm("Kullanıcıyı silmek istediğinize emin misiniz?")) {
+                var token = localStorage.getItem("token");
+                $.ajax({
+                    url: "http://localhost:5030/api/Users/" + id,
+                    type: "DELETE",
+                    headers: { "Authorization": "Bearer " + token },
+                    success: function () {
+                        loadUsers();
+                    }
+                });
+            }
         }
     </script>
 }

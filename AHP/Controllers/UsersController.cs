@@ -8,7 +8,7 @@ namespace AHP.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class UsersController : ControllerBase
     {
         private readonly UserManager<AppUser> _userManager;
@@ -19,17 +19,46 @@ namespace AHP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetUsers()
         {
-            var users = await _userManager.Users.Select(u => new
-            {
-                u.Id,
-                FullName = u.FullName,
-                Email = u.Email,
-                RegistrationDate = u.RegistrationDate
-            }).ToListAsync();
+            var users = await _userManager.Users.ToListAsync();
+            var userList = new List<object>();
 
-            return Ok(users);
+            foreach (var user in users)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                userList.Add(new
+                {
+                    user.Id,
+                    user.FullName,
+                    user.UserName,
+                    user.Email,
+                    Roles = roles
+                });
+            }
+            return Ok(userList);
+        }
+
+        [HttpPost("ChangeRole")]
+        public async Task<IActionResult> ChangeRole(string userId, string roleName)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return NotFound();
+
+            var currentRoles = await _userManager.GetRolesAsync(user);
+            await _userManager.RemoveFromRolesAsync(user, currentRoles);
+            await _userManager.AddToRoleAsync(user, roleName);
+
+            return Ok();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteUser(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound();
+            await _userManager.DeleteAsync(user);
+            return NoContent();
         }
     }
 }
