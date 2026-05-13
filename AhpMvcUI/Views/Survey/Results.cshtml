@@ -1,0 +1,106 @@
+﻿@{
+    ViewData["Title"] = "Anket Sonuçları";
+}
+
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="fw-bold" id="surveyTitleHeading">Sonuçlar Yükleniyor...</h3>
+                <a href="/Survey/MySurveys" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Anketlerime Dön
+                </a>
+            </div>
+            <hr />
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">Katılımcılar</h6>
+                </div>
+                <div class="list-group list-group-flush" id="userParticipantList">
+                    <div class="p-4 text-center">
+                        <div class="spinner-border text-primary" role="status"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div id="userAnswersDetail" class="card shadow-sm border-0" style="display:none;">
+                <div class="card-header bg-white border-bottom">
+                    <h6 class="mb-0 fw-bold text-primary" id="userSelectedParticipantName">Cevap Detayları</h6>
+                </div>
+                <div class="card-body" id="userResponsesContent"></div>
+            </div>
+            <div id="userEmptyState" class="text-center py-5 bg-light rounded border border-dashed">
+                <p class="text-muted mb-0">Katılımcının verdiği cevapları görmek için soldaki listeden seçim yapın.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let resultData = null;
+
+        $(document).ready(function () {
+            const surveyId = @ViewBag.SurveyId;
+            const token = localStorage.getItem("token");
+
+            $.ajax({
+                url: `http://localhost:5030/api/Surveys/${surveyId}/Results`,
+                type: "GET",
+                headers: { "Authorization": "Bearer " + token },
+                success: function (data) {
+                    resultData = data;
+                    $("#surveyTitleHeading").text(data.title + " - Sonuçları");
+
+                    let html = "";
+                    if (data.participants && data.participants.length > 0) {
+                        $.each(data.participants, function (i, p) {
+                            html += `<a href="javascript:void(0)" class="list-group-item list-group-item-action p-3" onclick="showParticipantDetail(${i})">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold">${p.userName}</span>
+                                    <span class="badge bg-light text-dark border">${p.date.split(' ')[0]}</span>
+                                </div>
+                                <small class="text-muted">${p.email}</small>
+                            </a>`;
+                        });
+                    } else {
+                        html = '<div class="p-4 text-center text-muted">Bu ankete henüz katılım sağlanmamış.</div>';
+                    }
+
+                    $("#userParticipantList").html(html);
+                },
+                error: function () {
+                    $("#surveyTitleHeading").text("Sonuçlar Yüklenemedi");
+                    $("#userParticipantList").html('<div class="p-3 text-danger">Veriler çekilirken hata oluştu.</div>');
+                }
+            });
+        });
+
+        function showParticipantDetail(index) {
+            const p = resultData.participants[index];
+            $("#userEmptyState").hide();
+            $("#userAnswersDetail").show();
+            $("#userSelectedParticipantName").text(p.userName + " (" + p.date + ")");
+
+            let html = "";
+            $.each(resultData.questions, function(i, q) {
+                const answer = p.responses.find(r => r.questionId === q.id);
+                const answerContent = answer && answer.answerText ? answer.answerText : '<span class="text-muted fst-italic">Boş bırakılmış</span>';
+
+                html += `<div class="mb-4">
+                    <label class="fw-bold text-dark d-block mb-2">${i + 1}. ${q.text}</label>
+                    <div class="p-3 bg-light rounded border-start border-4 border-primary">
+                        ${answerContent}
+                    </div>
+                </div>`;
+            });
+            $("#userResponsesContent").html(html);
+        }
+    </script>
+}
