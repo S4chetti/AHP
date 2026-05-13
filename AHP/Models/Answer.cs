@@ -1,6 +1,4 @@
-﻿using AHP.Models.CoreApiProject.Models;
-
-namespace AHP.Models
+﻿namespace AHP.Models.CoreApiProject.Models
 {
     public class Answer
     {
@@ -12,5 +10,6 @@ namespace AHP.Models
         public int? OptionId { get; set; }
         public Option? Option { get; set; }
         public string? TextResponse { get; set; }
+        public DateTime SubmissionDate { get; set; }
     }
 }

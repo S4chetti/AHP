@@ -3,20 +3,26 @@
 }
 
 <div class="container mt-5">
-    <div class="row mb-4">
-        <div class="col-md-8">
+    <div class="row mb-4 align-items-end">
+        <div class="col-md-5">
             <h2 class="fw-bold">Aktif Anketler</h2>
-            <p class="text-muted">Katılmak istediğiniz anketi seçerek görüşlerinizi bildirebilirsiniz.</p>
+            <p class="text-muted mb-0">Katılmak istediğiniz anketi seçebilirsiniz.</p>
         </div>
-        <div class="col-md-4">
-            <select id="categoryFilter" class="form-select form-select-lg shadow-sm">
+        <div class="col-md-3">
+            <label class="form-label small fw-bold text-muted">Kategoriye Göre Filtrele</label>
+            <select id="categoryFilter" class="form-select shadow-sm">
                 <option value="0">Tüm Kategoriler</option>
             </select>
         </div>
+        <div class="col-md-4 text-end">
+            <a href="/Survey/Create" class="btn btn-success btn-lg shadow-sm">
+                <i class="bi bi-plus-lg"></i> Yeni Anket Oluştur
+            </a>
+        </div>
     </div>
 
-    <div id="surveyList" class="row g-4">
-        <div class="text-center py-5">
+    <div id="surveyList" class="row g-4 mt-2">
+        <div class="text-center py-5 w-100">
             <div class="spinner-border text-primary" role="status"></div>
         </div>
     </div>
@@ -29,7 +35,7 @@
             loadSurveys(0);
 
             $("#categoryFilter").change(function () {
-                loadSurveys($(this).val());
+                loadSurveys(parseInt($(this).val()));
             });
         });
 
@@ -52,21 +58,21 @@
                 type: "GET",
                 success: function (data) {
                     var html = "";
-                    var filteredData = categoryId == 0 ? data : data.filter(x => x.categoryId == categoryId);
+                    var filteredData = categoryId === 0 ? data : data.filter(x => x.categoryId === categoryId);
 
                     if (filteredData.length === 0) {
-                        html = '<div class="col-12 text-center mt-5"><h5>Bu kategoride henüz anket bulunmuyor.</h5></div>';
+                        html = '<div class="col-12 text-center mt-5"><div class="alert alert-light border shadow-sm py-5"><h5>Bu kategoride henüz anket bulunmuyor.</h5></div></div>';
                     } else {
                         $.each(filteredData, function (i, item) {
                             html += '<div class="col-md-4">';
-                            html += '<div class="card h-100 shadow-sm border-0">';
+                            html += '<div class="card h-100 shadow-sm border-0 transition-hover">';
                             html += '<div class="card-body p-4">';
-                            html += '<span class="badge bg-soft-primary text-primary mb-2">' + (item.categoryName || "Genel") + '</span>';
+                            html += '<span class="badge bg-primary bg-opacity-10 text-primary mb-3">' + (item.categoryName || "Genel") + '</span>';
                             html += '<h5 class="card-title fw-bold">' + item.title + '</h5>';
-                            html += '<p class="card-text text-muted small">' + item.description.substring(0, 100) + '...</p>';
+                            html += '<p class="card-text text-muted small">' + (item.description ? item.description.substring(0, 80) : "") + '...</p>';
                             html += '</div>';
                             html += '<div class="card-footer bg-white border-0 p-4 pt-0">';
-                            html += '<a href="/Survey/Solve/' + item.id + '" class="btn btn-primary w-100 shadow-sm">Anketi Çöz</a>';
+                            html += '<a href="/Survey/Solve/' + item.id + '" class="btn btn-outline-primary w-100 stretched-link">Anketi Çöz</a>';
                             html += '</div></div></div>';
                         });
                     }

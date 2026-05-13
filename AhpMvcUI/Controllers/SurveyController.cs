@@ -9,6 +9,16 @@ namespace AhpMvcUI.Controllers
             return View();
         }
 
+        public IActionResult MySurveys()
+        {
+            return View();
+        }
+
+        public IActionResult Results(int id)
+        {
+            ViewBag.SurveyId = id;
+            return View();
+        }
         public IActionResult Solve(int id)
         {
             ViewBag.SurveyId = id;

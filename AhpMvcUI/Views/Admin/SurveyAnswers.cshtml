@@ -1,23 +1,27 @@
 ﻿@{
-    ViewData["Title"] = "Anket Cevapları";
-    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Anket Katılımcıları";
 }
 
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Anket Cevapları Detayı</h1>
-    <a href="/Admin/Surveys" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Geri Dön</a>
-</div>
-
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Kullanıcı Cevapları</h6>
-    </div>
-    <div class="card-body">
-        <div id="answersContainer">
-            <div class="text-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Yükleniyor...</span>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-dark text-white">
+                    <h6 class="mb-0">Katılımcı Listesi</h6>
                 </div>
+                <div class="list-group list-group-flush" id="participantList"></div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div id="answersDetail" class="card shadow-sm border-0" style="display:none;">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0" id="selectedParticipantName">Cevap Detayları</h6>
+                </div>
+                <div class="card-body" id="responsesContent"></div>
+            </div>
+            <div id="emptyState" class="text-center py-5 bg-light rounded">
+                <p class="text-muted">Detayları görmek için soldan bir katılımcı seçin.</p>
             </div>
         </div>
     </div>
@@ -25,59 +29,49 @@
 
 @section Scripts {
     <script>
-        let surveyId = @ViewBag.SurveyId;
-
+        let allData = null;
         $(document).ready(function () {
-            loadAnswers();
-        });
+            const surveyId = new URLSearchParams(window.location.search).get('id') || @ViewBag.SurveyId;
+            const token = localStorage.getItem("token");
 
-        function loadAnswers() {
-            var token = localStorage.getItem("token");
             $.ajax({
-                url: "http://localhost:5030/api/Surveys/" + surveyId + "/Answers",
+                url: `http://localhost:5030/api/Surveys/${surveyId}/Results`,
                 type: "GET",
                 headers: { "Authorization": "Bearer " + token },
                 success: function (data) {
-                    if (data.length === 0) {
-                        $("#answersContainer").html('<div class="alert alert-warning">Bu anket için henüz cevap bulunmamaktadır.</div>');
-                        return;
-                    }
-
-                    var html = '<div class="accordion" id="answersAccordion">';
-                    $.each(data, function (index, userAnswers) {
-                        html += '<div class="card mb-2">';
-                        html += '<div class="card-header" id="heading' + index + '">';
-                        html += '<h2 class="mb-0">';
-                        html += '<button class="btn btn-link btn-block text-left font-weight-bold text-dark text-decoration-none" type="button" data-toggle="collapse" data-target="#collapse' + index + '">';
-                        html += '<i class="fas fa-user mr-2"></i>' + userAnswers.userName + ' <span class="text-muted text-sm ml-2">(' + userAnswers.email + ')</span>';
-                        html += '</button>';
-                        html += '</h2>';
-                        html += '</div>';
-
-                        html += '<div id="collapse' + index + '" class="collapse" data-parent="#answersAccordion">';
-                        html += '<div class="card-body">';
-                        html += '<ul class="list-group list-group-flush">';
-
-                        $.each(userAnswers.responses, function (rIndex, resp) {
-                            html += '<li class="list-group-item">';
-                            html += '<strong class="d-block mb-1">Soru: ' + resp.questionText + '</strong>';
-                            html += '<span class="text-primary">Cevap: ' + (resp.answerText ? resp.answerText : "Boş bırakılmış") + '</span>';
-                            html += '</li>';
-                        });
-
-                        html += '</ul>';
-                        html += '</div>';
-                        html += '</div>';
-                        html += '</div>';
+                    allData = data;
+                    let html = "";
+                    $.each(data.participants, function (i, p) {
+                        html += `<a href="#" class="list-group-item list-group-item-action p-3" onclick="showDetail(${i})">
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">${p.userName}</span>
+                                <small class="text-muted">${p.date.split(' ')[0]}</small>
+                            </div>
+                            <small class="text-muted">${p.email}</small>
+                        </a>`;
                     });
-                    html += '</div>';
-
-                    $("#answersContainer").html(html);
-                },
-                error: function () {
-                    $("#answersContainer").html('<div class="alert alert-danger">Cevaplar yüklenirken bir hata oluştu.</div>');
+                    $("#participantList").html(html || '<div class="p-3 text-center">Henüz katılım yok.</div>');
                 }
             });
+        });
+
+        function showDetail(index) {
+            const p = allData.participants[index];
+            $("#emptyState").hide();
+            $("#answersDetail").show();
+            $("#selectedParticipantName").text(p.userName + " - " + p.date);
+
+            let html = "";
+            $.each(allData.questions, function(i, q) {
+                const answer = p.responses.find(r => r.questionId === q.id);
+                html += `<div class="mb-4">
+                    <label class="fw-bold text-primary d-block small">${i+1}. ${q.text}</label>
+                    <div class="p-3 bg-light rounded border-start border-3 border-primary mt-1">
+                        ${answer ? answer.answerText : '<span class="text-muted italic">Cevaplanmamış</span>'}
+                    </div>
+                </div>`;
+            });
+            $("#responsesContent").html(html);
         }
     </script>
 }

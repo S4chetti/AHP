@@ -38,12 +38,10 @@
                 success: function (data) {
                     var html = "";
                     $.each(data, function (i, item) {
-                        html += "<tr>";
-                        html += "<td>" + item.title + "</td>";
-                        html += "<td>" + new Date(item.createdDate).toLocaleDateString() + "</td>";
-                        html += "<td>";
-                        html += "<button class='btn btn-danger btn-sm' onclick='deleteSurvey(" + item.id + ")'>Sil</button>";
-                        html += "</td></tr>";
+        html += `<tr style="cursor:pointer" onclick="window.location.href='/Admin/SurveyAnswers?id=${item.id}'">`;
+        html += `<td><div class="fw-bold">${item.title}</div><small class="text-muted">${item.description.substring(0, 50)}...</small></td>`;
+        html += `<td>${new Date(item.createdDate).toLocaleDateString()}</td>`;
+        html += `<td><button class="btn btn-outline-danger btn-sm" onclick="event.stopPropagation(); deleteSurvey(${item.id})">Sil</button></td></tr>`;
                     });
                     $("#adminSurveyTableBody").html(html);
                 }

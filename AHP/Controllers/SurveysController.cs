@@ -28,6 +28,7 @@ namespace AHP.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll()
         {
             var surveys = await _context.Surveys.Include(s => s.Category).ToListAsync();
@@ -38,8 +39,10 @@ namespace AHP.Controllers
                 Description = s.Description,
                 CreatedDate = s.CreatedDate,
                 AppUserId = s.AppUserId,
-                CategoryName = s.Category?.Name
+                CategoryId = s.CategoryId,
+                CategoryName = s.Category != null ? s.Category.Name : "Genel"
             }).ToList();
+
             return Ok(dtos);
         }
 
@@ -90,11 +93,9 @@ namespace AHP.Controllers
         public async Task<IActionResult> Add(CreateSurveyDto dto)
         {
             var userName = User.Identity?.Name ?? User.FindFirst(ClaimTypes.Name)?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
             if (string.IsNullOrEmpty(userName)) return Unauthorized();
 
             var user = await _userManager.FindByNameAsync(userName) ?? await _userManager.FindByEmailAsync(userName);
-
             if (user == null) return Unauthorized();
 
             var survey = new Survey
@@ -122,6 +123,13 @@ namespace AHP.Controllers
                         for (int i = 1; i <= 5; i++)
                         {
                             question.Options.Add(new Option { Text = i.ToString() });
+                        }
+                    }
+                    else if (q.Options != null)
+                    {
+                        foreach (var optText in q.Options)
+                        {
+                            question.Options.Add(new Option { Text = optText });
                         }
                     }
                     survey.Questions.Add(question);
@@ -162,48 +170,101 @@ namespace AHP.Controllers
         [HttpPost("SubmitAnswers")]
         public async Task<IActionResult> SubmitAnswers(List<SubmitAnswerDto> dtos)
         {
-            try
+            var userName = User.Identity?.Name ?? User.FindFirst(ClaimTypes.Name)?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userName)) return Unauthorized();
+            var user = await _userManager.FindByNameAsync(userName) ?? await _userManager.FindByEmailAsync(userName);
+            if (user == null) return Unauthorized();
+
+            var submissionTime = DateTime.Now;
+
+            foreach (var dto in dtos)
             {
-                var userName = User.Identity?.Name ?? User.FindFirst(ClaimTypes.Name)?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userName)) return Unauthorized();
-
-                var user = await _userManager.FindByNameAsync(userName) ?? await _userManager.FindByEmailAsync(userName);
-
-                if (user == null) return Unauthorized();
-
-                foreach (var dto in dtos)
+                var answer = new Answer
                 {
-                    var answer = new Answer
-                    {
-                        AppUserId = user.Id,
-                        QuestionId = dto.QuestionId,
-                        OptionId = dto.OptionId > 0 ? dto.OptionId : null,
-                        TextResponse = string.IsNullOrWhiteSpace(dto.TextResponse) ? null : dto.TextResponse
-                    };
-                    await _context.Answers.AddAsync(answer);
-                }
+                    AppUserId = user.Id,
+                    QuestionId = dto.QuestionId,
+                    OptionId = dto.OptionId > 0 ? dto.OptionId : null,
+                    TextResponse = string.IsNullOrWhiteSpace(dto.TextResponse) ? null : dto.TextResponse,
+                    SubmissionDate = submissionTime
+                };
+                await _context.Answers.AddAsync(answer);
+            }
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
 
-                await _context.SaveChangesAsync();
-                return Ok();
-            }
-            catch (Exception ex)
+        [HttpGet("MySurveys")]
+        public async Task<IActionResult> GetMySurveys()
+        {
+            var userName = User.Identity?.Name ?? User.FindFirst(ClaimTypes.Name)?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userName)) return Unauthorized();
+
+            var user = await _userManager.FindByNameAsync(userName) ?? await _userManager.FindByEmailAsync(userName);
+            if (user == null) return Unauthorized();
+
+            var surveys = await _context.Surveys
+                .Include(s => s.Category)
+                .Where(s => s.AppUserId == user.Id)
+                .ToListAsync();
+
+            var dtos = surveys.Select(s => new SurveyDto
             {
-                return StatusCode(500, ex.InnerException != null ? ex.InnerException.Message : ex.Message);
-            }
+                Id = s.Id,
+                Title = s.Title,
+                Description = s.Description,
+                CreatedDate = s.CreatedDate,
+                CategoryId = s.CategoryId,
+                CategoryName = s.Category?.Name
+            }).ToList();
+
+            return Ok(dtos);
+        }
+
+        [HttpGet("{id}/Results")]
+        public async Task<IActionResult> GetSurveyResults(int id)
+        {
+            var survey = await _context.Surveys
+                .Include(s => s.Questions)
+                .ThenInclude(q => q.Options)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (survey == null) return NotFound();
+
+            var answers = await _context.Answers
+                .Include(a => a.AppUser)
+                .Where(a => survey.Questions.Select(q => q.Id).Contains(a.QuestionId))
+                .ToListAsync();
+
+            var result = answers.GroupBy(a => new { a.AppUserId, a.SubmissionDate, a.AppUser })
+                .Select(g => new
+                {
+                    UserName = g.Key.AppUser.FullName ?? g.Key.AppUser.UserName,
+                    Email = g.Key.AppUser.Email,
+                    Date = g.Key.SubmissionDate.ToString("dd.MM.yyyy HH:mm"),
+                    Responses = g.Select(a => new
+                    {
+                        QuestionId = a.QuestionId,
+                        AnswerText = a.OptionId != null
+                            ? survey.Questions.FirstOrDefault(q => q.Id == a.QuestionId)?.Options.FirstOrDefault(o => o.Id == a.OptionId)?.Text
+                            : a.TextResponse
+                    }).ToList()
+                }).ToList();
+
+            return Ok(new
+            {
+                survey.Title,
+                Questions = survey.Questions.Select(q => new { q.Id, q.Text }).ToList(),
+                Participants = result
+            });
         }
 
         [HttpGet("{id}/Answers")]
         public async Task<IActionResult> GetAnswers(int id)
         {
-            var survey = await _context.Surveys
-                .Include(s => s.Questions)
-                .FirstOrDefaultAsync(s => s.Id == id);
-
+            var survey = await _context.Surveys.Include(s => s.Questions).FirstOrDefaultAsync(s => s.Id == id);
             if (survey == null) return NotFound();
 
             var questionIds = survey.Questions.Select(q => q.Id).ToList();
-
             var answers = await _context.Answers
                 .Include(a => a.AppUser)
                 .Include(a => a.Question)
@@ -211,11 +272,12 @@ namespace AHP.Controllers
                 .Where(a => questionIds.Contains(a.QuestionId))
                 .ToListAsync();
 
-            var result = answers.GroupBy(a => a.AppUser)
+            var result = answers.GroupBy(a => new { a.AppUser, a.SubmissionDate })
                 .Select(g => new {
-                    UserId = g.Key.Id,
-                    UserName = g.Key.FullName ?? g.Key.UserName,
-                    Email = g.Key.Email,
+                    UserId = g.Key.AppUser.Id,
+                    UserName = g.Key.AppUser.FullName ?? g.Key.AppUser.UserName,
+                    Email = g.Key.AppUser.Email,
+                    Date = g.Key.SubmissionDate.ToString("dd.MM.yyyy HH:mm"),
                     Responses = g.Select(a => new {
                         QuestionText = a.Question.Text,
                         AnswerText = a.OptionId != null ? a.Question.Options.FirstOrDefault(o => o.Id == a.OptionId)?.Text : a.TextResponse

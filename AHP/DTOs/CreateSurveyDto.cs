@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace AHP.DTOs
+﻿namespace AHP.DTOs
 {
     public class CreateSurveyDto
     {
@@ -8,11 +6,5 @@ namespace AHP.DTOs
         public string Description { get; set; }
         public int CategoryId { get; set; }
         public List<CreateQuestionDto> Questions { get; set; }
-    }
-
-    public class CreateQuestionDto
-    {
-        public string Text { get; set; }
-        public bool IsRating { get; set; }
     }
 }

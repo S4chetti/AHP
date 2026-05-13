@@ -1,47 +1,40 @@
 ﻿@{
-    ViewData["Title"] = "Yeni Anket Ekle";
+    ViewData["Title"] = "Yeni Anket Oluştur";
 }
 
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-10">
-            <div class="card shadow border-0 mb-4">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white p-4">
+                    <h3 class="mb-0">Yeni Anket Tasarla</h3>
+                </div>
                 <div class="card-body p-5">
-                    <h3 class="card-title mb-4 fw-bold text-primary">Yeni Anket Oluştur</h3>
-
-                    <div class="mb-3">
-                        <label class="form-label text-muted fw-bold">Kategori Seçimi</label>
-                        <select id="categoryId" class="form-select form-control form-control-lg">
-                            <option value="">Yükleniyor...</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label text-muted fw-bold">Anket Başlığı</label>
-                        <input type="text" id="title" class="form-control form-control-lg" />
-                    </div>
-
                     <div class="mb-4">
-                        <label class="form-label text-muted fw-bold">Açıklama</label>
-                        <textarea id="description" class="form-control" rows="3"></textarea>
+                        <label class="form-label fw-bold">Anket Başlığı</label>
+                        <input type="text" id="surveyTitle" class="form-control form-control-lg" placeholder="Örn: Müşteri Memnuniyet Anketi">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Açıklama</label>
+                        <textarea id="surveyDescription" class="form-control" rows="3" placeholder="Anketin amacı hakkında kısa bilgi..."></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Kategori</label>
+                        <select id="surveyCategory" class="form-select"></select>
                     </div>
 
-                    <hr class="my-4" />
+                    <hr class="my-5" />
 
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-bold text-secondary">Sorular</h5>
-                        <button id="btnAddQuestion" class="btn btn-outline-success">
-                            + Yeni Soru Ekle
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="fw-bold">Sorular</h4>
+                        <button type="button" id="btnAddQuestion" class="btn btn-outline-primary">
+                            <i class="bi bi-plus-circle"></i> Soru Ekle
                         </button>
                     </div>
 
-                    <div id="questionsArea">
-                    </div>
+                    <div id="questionsContainer"></div>
 
-                    <hr class="my-4" />
-
-                    <button id="btnSaveSurvey" class="btn btn-primary btn-lg w-100 shadow-sm">Anketi Kaydet ve Yayınla</button>
-                    <div id="message" class="mt-3 text-center"></div>
+                    <button id="btnSaveSurvey" class="btn btn-success btn-lg w-100 mt-4 shadow">Anketi Yayınla</button>
                 </div>
             </div>
         </div>
@@ -50,98 +43,117 @@
 
 @section Scripts {
     <script>
-        let questionCounter = 0;
+        let questionCount = 0;
 
         $(document).ready(function () {
-            var token = localStorage.getItem("token");
-            if (token) {
-                $.ajax({
-                    url: "http://localhost:5030/api/Categories",
-                    type: "GET",
-                    headers: { "Authorization": "Bearer " + token },
-                    success: function (data) {
-                        var html = '<option value="">Lütfen bir kategori seçin...</option>';
-                        $.each(data, function (index, category) {
-                            html += '<option value="' + category.id + '">' + category.name + '</option>';
-                        });
-                        $("#categoryId").html(html);
-                    }
-                });
-            }
-        });
+            loadCategories();
 
-        $("#btnAddQuestion").click(function () {
-            questionCounter++;
-            let html = '<div class="card mb-3 border-left-primary bg-light q-item" id="q-' + questionCounter + '">' +
-                '<div class="card-body">' +
-                '<div class="row align-items-center">' +
-                '<div class="col-md-7">' +
-                '<input type="text" class="form-control q-text" placeholder="Sorunuzu buraya yazın...">' +
-                '</div>' +
-                '<div class="col-md-4">' +
-                '<select class="form-select form-control q-type">' +
-                '<option value="1">1-5 Arası Puanlama (Şıklı)</option>' +
-                '<option value="0">Açık Uçlu (Metin Yazmalı)</option>' +
-                '</select>' +
-                '</div>' +
-                '<div class="col-md-1">' +
-                '<button class="btn btn-danger w-100 fw-bold" onclick="$(\'#q-' + questionCounter + '\').remove()">X</button>' +
-                '</div>' +
-                '</div>' +
-                '</div>' +
-                '</div>';
-            $("#questionsArea").append(html);
-        });
+            $("#btnAddQuestion").click(function () {
+                questionCount++;
+                addQuestionBlock(questionCount);
+            });
 
-        $("#btnSaveSurvey").click(function () {
-            var token = localStorage.getItem("token");
-            if (!token) {
-                alert("Lütfen önce giriş yapın!");
-                return;
-            }
-
-            var catId = $("#categoryId").val();
-            if (!catId) {
-                alert("Lütfen anket için bir kategori seçin!");
-                return;
-            }
-
-            var questionsList = [];
-            $(".q-item").each(function () {
-                var textVal = $(this).find(".q-text").val();
-                var typeVal = $(this).find(".q-type").val();
-
-                if (textVal.trim() !== "") {
-                    questionsList.push({
-                        Text: textVal,
-                        IsRating: typeVal === "1" ? true : false
-                    });
+            $(document).on("change", ".question-type", function () {
+                const id = $(this).data("id");
+                const optionsDiv = $("#optionsContainer_" + id);
+                if ($(this).val() === "multiple") {
+                    optionsDiv.show();
+                } else {
+                    optionsDiv.hide();
                 }
             });
 
-            var data = {
-                Title: $("#title").val(),
-                Description: $("#description").val(),
-                CategoryId: parseInt(catId),
-                Questions: questionsList
+            $(document).on("click", ".btn-add-option", function () {
+                const id = $(this).data("id");
+                const container = $("#optionsList_" + id);
+                container.append('<div class="input-group mb-2"><input type="text" class="form-control option-input" placeholder="Seçenek metni"><button class="btn btn-outline-danger btn-remove-option" type="button">Sil</button></div>');
+            });
+
+            $(document).on("click", ".btn-remove-option", function () {
+                $(this).closest(".input-group").remove();
+            });
+
+            $("#btnSaveSurvey").click(saveSurvey);
+        });
+
+        function loadCategories() {
+            $.ajax({
+                url: "http://localhost:5030/api/Categories",
+                type: "GET",
+                success: function (data) {
+                    const select = $("#surveyCategory");
+                    $.each(data, function (i, item) {
+                        select.append(new Option(item.name, item.id));
+                    });
+                }
+            });
+        }
+
+        function addQuestionBlock(id) {
+            const html = `
+                <div class="card mb-4 question-block border-start border-primary border-4 shadow-sm" data-id="${id}">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label small fw-bold">Soru Metni</label>
+                                <input type="text" class="form-control question-text" placeholder="Sorunuzu yazın...">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label small fw-bold">Soru Tipi</label>
+                                <select class="form-select question-type" data-id="${id}">
+                                    <option value="rating">Derecelendirme (1-5)</option>
+                                    <option value="multiple">Çoktan Seçmeli</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="optionsContainer_${id}" style="display:none;" class="mt-2 bg-light p-3 rounded">
+                            <label class="form-label small fw-bold">Seçenekler</label>
+                            <div id="optionsList_${id}"></div>
+                            <button type="button" class="btn btn-sm btn-link btn-add-option" data-id="${id}">+ Seçenek Ekle</button>
+                        </div>
+                    </div>
+                </div>`;
+            $("#questionsContainer").append(html);
+        }
+
+        function saveSurvey() {
+            const token = localStorage.getItem("token");
+            const surveyData = {
+                title: $("#surveyTitle").val(),
+                description: $("#surveyDescription").val(),
+                categoryId: parseInt($("#surveyCategory").val()),
+                questions: []
             };
+
+            $(".question-block").each(function () {
+                const id = $(this).data("id");
+                const type = $(this).find(".question-type").val();
+                const question = {
+                    text: $(this).find(".question-text").val(),
+                    isRating: type === "rating",
+                    options: []
+                };
+
+                if (type === "multiple") {
+                    $(this).find(".option-input").each(function () {
+                        if ($(this).val()) question.options.push($(this).val());
+                    });
+                }
+
+                surveyData.questions.push(question);
+            });
 
             $.ajax({
                 url: "http://localhost:5030/api/Surveys",
                 type: "POST",
                 contentType: "application/json",
                 headers: { "Authorization": "Bearer " + token },
-                data: JSON.stringify(data),
+                data: JSON.stringify(surveyData),
                 success: function () {
-                    $("#message").html('<div class="alert alert-success">Anket ve sorular başarıyla oluşturuldu! Yönlendiriliyorsunuz...</div>');
-                    setTimeout(function () {
-                        window.location.href = "/Home/Index";
-                    }, 2000);
-                },
-                error: function () {
-                    $("#message").html('<div class="alert alert-danger">Anket oluşturulurken bir hata meydana geldi.</div>');
+                    alert("Anket başarıyla oluşturuldu!");
+                    window.location.href = "/Admin/Surveys";
                 }
             });
-        });
+        }
     </script>
 }

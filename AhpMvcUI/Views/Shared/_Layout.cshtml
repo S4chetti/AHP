@@ -36,6 +36,7 @@
                             <a class="nav-link text-danger" href="#" onclick="logout()">Çıkış Yap</a>
                         </li>
                     </ul>
+
                 </div>
             </div>
         </nav>
@@ -45,6 +46,8 @@
             @RenderBody()
         </main>
     </div>
+
+
 
     <footer class="border-top footer text-muted mt-5">
         <div class="container text-center py-3">
@@ -85,6 +88,8 @@
             window.location.href = "/Home/Index";
         }
     </script>
+
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
